@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Enya Nova Go Sonic: Ultimate Controller</title>
+    <title>Enya Nova Go Sonic Controller</title>
     <style>
         :root { --accent: #00f2ff; --bg: #050a14; --card: #121a2d; --dim: #5c6c8c; --success: #28a745; --err: #ff4444; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: #fff; margin: 0; padding: 0; overflow: hidden; user-select: none; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: #fff; margin: 0; padding: 0; overflow: hidden; user-select: none; }
         
-        /* Header */
         .header { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; background: #0d1526; border-bottom: 1px solid #1e2a44; position: sticky; top:0; z-index: 10; }
         .bt-btn { border: 1px solid var(--accent); color: var(--accent); padding: 8px 16px; border-radius: 20px; font-size: 10px; cursor: pointer; background: transparent; transition: 0.3s; font-weight: bold; text-transform: uppercase; }
         .bt-btn.active { background: var(--accent); color: #000; box-shadow: 0 0 15px var(--accent); }
@@ -18,7 +17,6 @@
         .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--err); }
         .dot.on { background: var(--success); box-shadow: 0 0 5px var(--success); }
 
-        /* Grid */
         #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; padding: 15px; height: calc(100vh - 85px); overflow-y: auto; padding-bottom: 100px; box-sizing: border-box; }
         .card { background: var(--card); border-radius: 15px; padding: 10px; border: 1px solid #1e2a44; text-align: center; position: relative; transition: 0.2s; }
         .card:active { transform: scale(0.95); background: #1a253d; }
@@ -26,7 +24,6 @@
         .card .name { font-size: 10px; font-weight: bold; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .tag { position: absolute; top: 15px; left: 15px; font-size: 7px; color: var(--accent); background: rgba(0,0,0,0.8); padding: 1px 5px; border-radius: 3px; border: 0.5px solid var(--accent); z-index: 2; }
 
-        /* Drawer */
         #drawer { display: none; position: fixed; bottom: 0; left: 0; width: 100%; height: 85vh; background: #0d1526; z-index: 1000; flex-direction: column; border-top: 1px solid var(--accent); border-radius: 25px 25px 0 0; box-shadow: 0 -10px 50px #000; animation: slideUp 0.3s ease; }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
         
@@ -80,9 +77,7 @@
 </div>
 
 <script>
-    // ВШИТЫЕ ДАННЫЕ (Если файл экспортирован как Offline)
     let offlineData = null; 
-
     let presets = [];
     let currentPreset = null;
     let midiOutput = null;
@@ -91,7 +86,6 @@
     window.onload = async () => {
         if (offlineData) {
             presets = offlineData;
-            console.log("Loaded from embedded data");
         } else {
             await syncData();
         }
@@ -119,16 +113,34 @@
     }
 
     async function initMIDI() {
+        const btn = document.getElementById("bt-status");
+        btn.innerText = "ПОИСК...";
         try {
+            // Запрос Bluetooth (для активации стека на мобильных)
+            if (navigator.bluetooth) {
+                await navigator.bluetooth.requestDevice({
+                    filters: [{ namePrefix: 'Enya' }, { namePrefix: 'Nova' }],
+                    optionalServices: ['0000ffe0-0000-1000-8000-00805f9b34fb']
+                }).catch(() => console.log("BT Dialog closed"));
+            }
+
             const midi = await navigator.requestMIDIAccess({ sysex: true });
-            midiOutput = Array.from(midi.outputs.values()).find(o => /nova|enya|midi/i.test(o.name));
+            const outputs = Array.from(midi.outputs.values());
+            midiOutput = outputs.find(o => /nova|enya|midi/i.test(o.name)) || outputs[0];
+
             if (midiOutput) {
-                document.getElementById("bt-status").innerText = "ONLINE";
-                document.getElementById("bt-status").classList.add("active");
+                btn.innerText = "ONLINE";
+                btn.classList.add("active");
                 document.getElementById("conn-dot").classList.add("on");
-                document.getElementById("conn-text").innerText = "CONNECTED: " + midiOutput.name;
-            } else { alert("Гитара не найдена"); }
-        } catch (e) { alert("MIDI заблокирован. Нужен HTTPS."); }
+                document.getElementById("conn-text").innerText = "READY: " + midiOutput.name;
+            } else {
+                alert("Гитара не обнаружена. Сопрягите её в настройках Bluetooth.");
+                btn.innerText = "RETRY";
+            }
+        } catch (e) {
+            alert("MIDI доступ отклонен. Используйте HTTPS и Chrome.");
+            btn.innerText = "ERROR";
+        }
     }
 
     function sendEnyaParam(id, val) {
@@ -162,6 +174,7 @@
     }
 
     function switchTab(key, el) {
+        if (!el) return;
         document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
         el.classList.add("active");
         const group = currentPreset.detailObj[key];
@@ -177,22 +190,23 @@
 
     async function syncFullPreset() {
         if (!midiOutput) return alert("Нет связи");
+        const btn = document.getElementById("sync-btn");
+        btn.innerText = "SENDING...";
         const params = Object.values(currentPreset.detailObj).flatMap(g => Object.values(g).filter(v => typeof v === "number"));
         for (let i = 0; i < params.length; i++) {
             sendEnyaParam(i, params[i]);
-            await new Promise(r => setTimeout(r, 40));
+            await new Promise(r => setTimeout(r, 45));
         }
-        alert("Синхронизация завершена");
+        btn.innerText = "SYNCED ✅";
+        setTimeout(() => btn.innerText = "SYNC TO GUITAR ⚡", 2000);
     }
 
     function closeDrawer() { document.getElementById("drawer").style.display = "none"; }
 
-    // ГЕНЕРАЦИЯ ПОЛНОСТЬЮ АВТОНОМНОГО HTML
     function exportOfflineHTML() {
         const currentCode = document.documentElement.outerHTML;
         const dataInjection = `let offlineData = ${JSON.stringify(presets)};`;
         const finalCode = currentCode.replace('let offlineData = null;', dataInjection);
-        
         const blob = new Blob([finalCode], { type: 'text/html' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
