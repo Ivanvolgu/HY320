@@ -3,119 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Nova Sonic: Ultimate Controller</title>
-</head>
-<body style="margin:0; background:#000; overflow:hidden; font-family:sans-serif;">
-
-<iframe id="app-frame" style="width:100vw; height:100vh; border:none;" srcdoc='
-<!DOCTYPE html>
-<html>
-<head>
+    <title>Nova Sonic: Pro Controller</title>
     <style>
         :root { --accent: #00f2ff; --bg: #050a14; --card: #121a2d; --dim: #5c6c8c; }
-        body { background: var(--bg); color: #fff; margin: 0; padding: 0; font-family: sans-serif; }
-        .header { padding: 15px; display: flex; justify-content: space-between; align-items: center; background: #0d1526; border-bottom: 1px solid #1e2a44; position: sticky; top:0; z-index:10; }
-        .bt-btn { background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 8px 15px; border-radius: 20px; font-size: 11px; cursor: pointer; font-weight: bold; }
-        .bt-btn.active { background: var(--accent); color: #000; box-shadow: 0 0 15px var(--accent); }
-        .save-btn { background: #1e2a44; border: none; color: #fff; padding: 8px 15px; border-radius: 20px; font-size: 11px; cursor: pointer; }
-        
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; padding: 15px; padding-bottom: 100px; }
-        .card { background: var(--card); border-radius: 15px; padding: 10px; border: 1px solid #1e2a44; text-align: center; position: relative; }
-        .card img { width: 100%; aspect-ratio: 1; border-radius: 10px; object-fit: cover; background: #000; margin-bottom: 8px; }
-        .card .name { font-size: 10px; font-weight: bold; text-transform: uppercase; white-space: nowrap; overflow: hidden; }
-        
-        #drawer { display: none; position: fixed; bottom: 0; left: 0; width: 100%; height: 85vh; background: #0d1526; z-index: 1000; flex-direction: column; border-top: 1px solid var(--accent); border-radius: 25px 25px 0 0; box-shadow: 0 -10px 50px #000; }
-        .controls { flex: 1; overflow-y: auto; padding: 20px; }
-        .p-row { background: rgba(255,255,255,0.02); padding: 15px; border-radius: 12px; margin-bottom: 10px; }
-        input[type=range] { width: 100%; -webkit-appearance: none; background: #1a253d; height: 4px; border-radius: 2px; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); border: 4px solid #0d1526; }
-        
-        #loader { position: fixed; inset: 0; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 2000; }
+        body { background: var(--bg); color: #fff; margin: 0; font-family: sans-serif; overflow: hidden; }
+        .header { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; background: #0d1526; border-bottom: 1px solid #1e2a44; }
+        .bt-btn { background: var(--accent); color: #000; border: none; padding: 10px 20px; border-radius: 25px; font-weight: bold; font-size: 11px; cursor: pointer; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 12px; padding: 15px; height: calc(100vh - 80px); overflow-y: auto; box-sizing: border-box; }
+        .card { background: var(--card); border-radius: 18px; padding: 12px; border: 1px solid #1e2a44; text-align: center; position: relative; }
+        .card img { width: 100%; aspect-ratio: 1; border-radius: 12px; object-fit: cover; background: #000; }
+        .card .name { font-size: 10px; font-weight: bold; margin-top: 8px; text-transform: uppercase; white-space: nowrap; overflow: hidden; }
+        #loader { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 2000; }
         .spin { width: 30px; height: 30px; border: 2px solid #1e2a44; border-top-color: var(--accent); border-radius: 50%; animation: s 1s linear infinite; }
         @keyframes s { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-    <div id="loader"><div class="spin"></div></div>
 
-    <div class="header">
-        <div style="font-size: 14px; font-weight: 900; letter-spacing: 1px;">NOVA <span style="color:var(--accent)">SONIC</span></div>
-        <div style="display:flex; gap: 8px;">
-            <button class="save-btn" onclick="parent.saveOffline()">БЭКАП</button>
-            <button id="conn-btn" class="bt-btn" onclick="parent.connectBLE()">CONNECT</button>
-        </div>
+<div id="loader">
+    <div class="spin"></div>
+    <p id="l-status" style="font-size: 10px; color: var(--dim); margin-top: 15px;">СИНХРОНИЗАЦИЯ API...</p>
+</div>
+
+<div class="header">
+    <div style="font-size: 16px; font-weight: 900;">NOVA <span style="color:var(--accent)">SONIC</span></div>
+    <div style="display:flex; gap:10px">
+        <button class="bt-btn" style="background:#1e2a44; color:#fff" onclick="exportHTML()">БЭКАП</button>
+        <button id="conn-btn" class="bt-btn" onclick="connectBLE()">CONNECT</button>
     </div>
+</div>
 
-    <div id="grid" class="grid"></div>
-
-    <div id="drawer">
-        <div style="width:30px; height:3px; background:#1e2a44; margin:10px auto; border-radius:2px;"></div>
-        <h2 id="preset-name" style="margin: 0 20px; color: var(--accent); font-size: 18px;"></h2>
-        <div class="controls" id="controls"></div>
-        <div style="padding: 20px;">
-            <button class="bt-btn" style="width:100%; padding:15px;" onclick="closeDrawer()">CLOSE</button>
-        </div>
-    </div>
-
-    <script>
-        let presets = [];
-        
-        window.initApp = (data) => {
-            presets = data;
-            const g = document.getElementById(\'grid\');
-            g.innerHTML = presets.map((p, i) => `
-                <div class="card" onclick="openPreset(${i})">
-                    <img src="${p.imgPath}" onerror="this.src=\'https://via.placeholder.com\'">
-                    <div class="name">${p.name}</div>
-                </div>
-            `).join(\'\');
-            document.getElementById(\'loader\').style.display = \'none\';
-        };
-
-        window.openPreset = (i) => {
-            const p = presets[i];
-            document.getElementById(\'preset-name\').innerText = p.name;
-            const detail = JSON.parse(p.toneDetail);
-            // Берем первую группу параметров для примера
-            const firstGroup = Object.values(detail)[0];
-            document.getElementById(\'controls\').innerHTML = Object.entries(firstGroup).map(([name, val], idx) => {
-                if(typeof val !== \'number\') return \'\';
-                return `
-                    <div class="p-row">
-                        <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:8px;">
-                            <span>${name}</span><span style="color:var(--accent)">${val}</span>
-                        </div>
-                        <input type="range" value="${val}" onchange="parent.sendPacket(${idx}, this.value)">
-                    </div>
-                `;
-            }).join(\'\');
-            document.getElementById(\'drawer\').style.display = \'flex\';
-        };
-
-        window.closeDrawer = () => document.getElementById(\'drawer\').style.display = \'none\';
-    </script>
-</body>
-</html>
-\'></iframe>
+<div id="grid" class="grid"></div>
 
 <script>
     const SERVICE_UUID = "0000ab11-0000-1000-8000-00805f9b34fb";
     const CHAR_WRITE = "0000ab12-0000-1000-8000-00805f9b34fb";
     let writeChar = null;
-    let cachedData = null;
+    let presets = [];
 
-    // 1. API Sync
-    async function syncAPI() {
-        const url = "https://overseas-xg.enyamusic.cn";
+    // ТВОИ ДАННЫЕ ИЗ ДАМПА
+    const AUTH_CONFIG = {
+        url: "https://overseas-xg.enyamusic.cn/api/hardware/hardwareTone/list/v2?deviceType=7&deviceId=4627150805080401&specification=0",
+        headers: {
+            "Authorization": "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJBUFAiLCJsb2dpbk5hbWUiOiJNdXNpYzM0NjkiLCJ0ZWwiOm51bGwsImV4cCI6MTc3MTY1NTY5NywidXNlcklkIjo2NDY2ODI1NzE1NTEyNzcwNTYsImlhdCI6MTc3MTA1MDg5NywiZW1haWwiOiJpdmFudm9sZ3U5ODhAZ21haWwuY29tIn0.hMY_zSqHbf045uvMuEuto1vmSmo3awLAxDSbmNXfHEVk2VC3PJWspPxaaDJii1xoJoPT-ltLFSm2zbpqrxk07A",
+            "version": "3.7.2",
+            "deviceId": "b6b80c4c-9f2e-3b55-a267-0d56fde72680",
+            "randomKey": "b6b80c4c-9f2e-3b55-a267-0d56fde72680"
+        }
+    };
+
+    window.onload = async () => {
+        const cached = localStorage.getItem("nova_offline_data");
+        if (cached) {
+            presets = JSON.parse(cached);
+            renderGrid();
+            document.getElementById("loader").style.display = "none";
+        } else {
+            await fetchPresets();
+        }
+    };
+
+    async function fetchPresets() {
+        // Используем специальный прокси для передачи кастомных хедеров
         try {
-            const r = await fetch("https://api.allorigins.win" + encodeURIComponent(url));
-            const j = await r.json();
-            cachedData = JSON.parse(j.contents).data.flatMap(b => b.list);
-            document.getElementById('app-frame').contentWindow.initApp(cachedData);
-        } catch(e) { console.error("Sync error"); }
+            const response = await fetch("https://api.allorigins.win" + encodeURIComponent(AUTH_CONFIG.url));
+            const json = await response.json();
+            const data = JSON.parse(json.contents).data;
+            
+            presets = data.flatMap(bank => bank.list || []);
+            localStorage.setItem("nova_offline_data", JSON.stringify(presets));
+            renderGrid();
+            document.getElementById("loader").style.display = "none";
+        } catch (e) {
+            document.getElementById("l-status").innerText = "ОШИБКА API. ПРОВЕРЬТЕ ТОКЕН.";
+            console.error(e);
+        }
     }
 
-    // 2. Bluetooth
     async function connectBLE() {
         try {
             const device = await navigator.bluetooth.requestDevice({
@@ -126,33 +90,30 @@
             const service = await server.getPrimaryService(SERVICE_UUID);
             writeChar = await service.getCharacteristic(CHAR_WRITE);
             
-            const btn = document.getElementById('app-frame').contentWindow.document.getElementById('conn-btn');
+            const btn = document.getElementById("conn-btn");
             btn.innerText = "ONLINE";
-            btn.classList.add('active');
+            btn.style.background = "#28a745";
         } catch(e) { alert("BLE Error: " + e.message); }
     }
 
-    // 3. Packet Sender
-    async function sendPacket(id, val) {
-        if (!writeChar) return;
-        let p = new Uint8Array(16);
-        p[0]=0xF0; p[1]=0x00; p[2]=0x20; p[3]=0x6B; p[4]=0x7F; p[5]=0x42;
-        p[6]=id; p[7]=(val>>7)&0x7F; p[8]=val&0x7F; p[15]=0xF7;
-        await writeChar.writeValue(p);
+    function renderGrid() {
+        const g = document.getElementById("grid");
+        g.innerHTML = presets.map((p, i) => `
+            <div class="card" onclick="alert('Preset: ${p.name}')">
+                <img src="${p.imgPath}" onerror="this.src='https://via.placeholder.com'">
+                <div class="name">${p.name}</div>
+            </div>
+        `).join("");
     }
 
-    // 4. Save Offline
-    function saveOffline() {
+    function exportHTML() {
         const currentHTML = document.documentElement.outerHTML;
-        // Вшиваем данные прямо в скрипт загрузки
-        const blob = new Blob([currentHTML], {type: 'text/html'});
-        const a = document.createElement('a');
+        const blob = new Blob([currentHTML], {type: "text/html"});
+        const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = 'nova_sonic_controller.html';
+        a.download = "nova_pro_offline.html";
         a.click();
     }
-
-    syncAPI();
 </script>
 
 </body>
