@@ -3,165 +3,109 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Enya Nova Go Sonic: Direct BLE</title>
+    <title>Nova Sonic Controller</title>
     <style>
-        :root { --accent: #00f2ff; --bg: #050a14; --card: #121a2d; --dim: #5c6c8c; --success: #28a745; --err: #ff4444; }
-        body { font-family: system-ui, sans-serif; background: var(--bg); color: #fff; margin: 0; padding: 0; overflow: hidden; user-select: none; }
-        .header { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; background: #0d1526; border-bottom: 1px solid #1e2a44; }
-        .bt-btn { border: 1px solid var(--accent); color: var(--accent); padding: 10px 18px; border-radius: 25px; font-size: 11px; cursor: pointer; background: transparent; font-weight: bold; }
-        .bt-btn.active { background: var(--accent); color: #000; box-shadow: 0 0 15px var(--accent); }
-        #status-bar { font-size: 9px; color: var(--dim); margin-top: 5px; font-family: monospace; }
-        #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; padding: 15px; height: calc(100vh - 90px); overflow-y: auto; padding-bottom: 100px; box-sizing: border-box; }
-        .card { background: var(--card); border-radius: 15px; padding: 10px; border: 1px solid #1e2a44; text-align: center; position: relative; }
-        .card img { width: 100%; aspect-ratio: 1; border-radius: 10px; object-fit: cover; background: #000; margin-bottom: 8px; }
-        .card .name { font-size: 10px; font-weight: bold; text-transform: uppercase; }
-        #drawer { display: none; position: fixed; bottom: 0; left: 0; width: 100%; height: 85vh; background: #0d1526; z-index: 1000; flex-direction: column; border-top: 1px solid var(--accent); border-radius: 25px 25px 0 0; }
-        .tabs { display: flex; overflow-x: auto; gap: 15px; padding: 15px; border-bottom: 1px solid #1e2a44; }
-        .tab { font-size: 10px; font-weight: bold; color: var(--dim); cursor: pointer; padding-bottom: 5px; }
-        .tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
-        .controls { flex: 1; overflow-y: auto; padding: 20px; }
-        .p-row { background: rgba(255,255,255,0.02); padding: 12px; border-radius: 12px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05); }
-        input[type=range] { width: 100%; -webkit-appearance: none; background: #1a253d; height: 4px; border-radius: 2px; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); border: 4px solid #0d1526; }
-        .footer { padding: 15px 20px 30px; display: flex; flex-direction: column; gap: 10px; background: #0d1526; border-top: 1px solid #1e2a44; }
-        .btn { padding: 15px; border-radius: 30px; border: none; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 11px; width: 100%; }
-        #loader { position: fixed; inset:0; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 2000; }
-        .spin { width: 25px; height: 25px; border: 2px solid #1e2a44; border-top-color: var(--accent); border-radius: 50%; animation: s 1s linear infinite; }
-        @keyframes s { to { transform: rotate(360deg); } }
+        :root { --accent: #00f2ff; --bg: #050a14; --card: #121a2d; }
+        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: #fff; margin: 0; padding: 20px; text-align: center; }
+        .main-btn { background: var(--accent); color: #000; border: none; padding: 25px 35px; border-radius: 50px; font-weight: 900; font-size: 14px; cursor: pointer; box-shadow: 0 0 30px rgba(0, 242, 255, 0.3); text-transform: uppercase; letter-spacing: 1px; transition: 0.2s; }
+        .main-btn:active { transform: scale(0.95); opacity: 0.8; }
+        #status { font-size: 10px; color: #5c6c8c; font-family: monospace; margin: 20px 0; line-height: 1.5; border: 1px solid #1e2a44; padding: 10px; border-radius: 10px; min-height: 30px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; padding-bottom: 50px; }
+        .card { background: var(--card); padding: 15px; border-radius: 18px; border: 1px solid #1e2a44; font-size: 10px; font-weight: bold; text-transform: uppercase; }
+        .card.active { border-color: var(--accent); box-shadow: 0 0 10px var(--accent); }
     </style>
 </head>
 <body>
 
-<div id="loader"><div class="spin"></div></div>
-
-<div class="header">
-    <div>
-        <h1 style="font-size:16px; font-weight:900; margin:0;">NOVA <span style="color:var(--accent);">SONIC</span></h1>
-        <div id="status-bar">READY FOR BLE</div>
-    </div>
-    <button id="bt-status" class="bt-btn" onclick="connectBLE()">CONNECT BLE</button>
-</div>
-
-<div id="grid"></div>
-
-<div id="drawer">
-    <div style="width:30px; height:3px; background:#1e2a44; margin:10px auto; border-radius:2px;"></div>
-    <h2 id="preset-title" style="margin:0 20px; color:var(--accent); font-size: 18px;">PRESET</h2>
-    <div class="tabs" id="tabs"></div>
-    <div class="controls" id="controls"></div>
-    <div class="footer">
-        <button id="sync-btn" class="btn" style="background:var(--accent); color:#000;" onclick="syncFullPreset()">SYNC TO GUITAR ⚡</button>
-        <button class="btn" style="background:#1e2a44; color:#fff;" onclick="closeDrawer()">CLOSE</button>
-    </div>
-</div>
+    <h1 style="font-weight: 200; letter-spacing: 4px;">NOVA <span style="font-weight: 900; color:var(--accent)">SONIC</span></h1>
+    
+    <button id="connect-btn" class="main-btn">PAIR WITH GUITAR</button>
+    
+    <div id="status">DEVICE STATUS: DISCONNECTED<br>WAITING FOR ACTION...</div>
+    
+    <div id="grid" class="grid"></div>
 
 <script>
     const SERVICE_UUID = "0000ab11-0000-1000-8000-00805f9b34fb";
     const CHAR_WRITE = "0000ab12-0000-1000-8000-00805f9b34fb";
     
-    let presets = [];
-    let currentPreset = null;
     let writeChar = null;
+    let presets = [];
 
-    window.onload = async () => {
-        await loadData();
-        document.getElementById("loader").style.display = "none";
-    };
+    // Привязка к прямому клику (обязательно для вызова окна Bluetooth)
+    document.getElementById('connect-btn').onclick = async function() {
+        const log = document.getElementById('status');
+        log.innerHTML = "STATUS: REQUESTING DEVICE...";
 
-    async function loadData() {
-        const API = "https://api.allorigins.win" + encodeURIComponent("https://overseas-xg.enyamusic.cn");
         try {
-            const r = await fetch(API);
-            const j = await r.json();
-            const data = JSON.parse(j.contents).data;
-            presets = data.flatMap(bank => bank.list.map(p => ({
-                ...p, detailObj: JSON.parse(p.toneDetail)
-            })));
-            renderGrid();
-        } catch(e) {
-            const cached = localStorage.getItem("nova_cache");
-            if(cached) { presets = JSON.parse(cached); renderGrid(); }
-        }
-    }
-
-    async function connectBLE() {
-        try {
+            // Ищем именно твое устройство "NOVA Go Sonic System"
             const device = await navigator.bluetooth.requestDevice({
-                filters: [{ namePrefix: 'NOVA' }],
+                filters: [
+                    { name: 'NOVA Go Sonic System' }, 
+                    { namePrefix: 'NOVA' }
+                ],
                 optionalServices: [SERVICE_UUID]
             });
+
+            log.innerHTML = `STATUS: CONNECTING TO ${device.name}...`;
             const server = await device.gatt.connect();
+            
+            log.innerHTML = "STATUS: INITIALIZING SERVICE...";
             const service = await server.getPrimaryService(SERVICE_UUID);
+            
+            log.innerHTML = "STATUS: ACCESSING WRITE CHANNEL...";
             writeChar = await service.getCharacteristic(CHAR_WRITE);
             
-            document.getElementById("bt-status").innerText = "CONNECTED";
-            document.getElementById("bt-status").classList.add("active");
-            document.getElementById("status-bar").innerText = "GATT CONNECTED: " + device.name;
-        } catch(e) {
-            alert("Connection failed: " + e.message);
+            log.innerHTML = `STATUS: CONNECTED ✅<br>READY TO SEND PACKETS`;
+            this.style.background = "#28a745";
+            this.innerText = "CONNECTED";
+            
+            // Тестовый пакет при подключении
+            sendPacket(0, 50);
+
+        } catch (error) {
+            console.error(error);
+            log.innerHTML = `<span style="color:#ff4444">ERROR: ${error.message}</span><br>Check HTTPS and Location permissions.`;
         }
-    }
+    };
 
     async function sendPacket(id, val) {
         if (!writeChar) return;
-        // Тот самый 16-байтовый пакет
+        // Тот самый 16-байтовый протокол Enya
         let p = new Uint8Array(16);
         p[0]=0xF0; p[1]=0x00; p[2]=0x20; p[3]=0x6B; p[4]=0x7F; p[5]=0x42;
         p[6]=id; p[7]=(val>>7)&0x7F; p[8]=val&0x7F; p[15]=0xF7;
         
         try {
             await writeChar.writeValue(p);
-            document.getElementById("status-bar").innerText = `TX: Param ${id} -> ${val}`;
-        } catch(e) { console.log(e); }
-    }
-
-    function renderGrid() {
-        document.getElementById("grid").innerHTML = presets.map((p, i) => `
-            <div class="card" onclick="openDrawer(${i})">
-                <img src="${p.imgPath}" onerror="this.src='https://via.placeholder.com'">
-                <div class="name">${p.name}</div>
-            </div>
-        `).join("");
-    }
-
-    function openDrawer(i) {
-        currentPreset = presets[i];
-        document.getElementById("preset-title").innerText = currentPreset.name;
-        const keys = Object.keys(currentPreset.detailObj);
-        document.getElementById("tabs").innerHTML = keys.map((k, idx) => `
-            <div class="tab ${idx===0?'active':''}" onclick="switchTab('${k}', this)">${k}</div>
-        `).join("");
-        document.getElementById("drawer").style.display = "flex";
-        switchTab(keys[0], document.querySelector(".tab"));
-    }
-
-    function switchTab(key, el) {
-        document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-        el.classList.add("active");
-        const group = currentPreset.detailObj[key];
-        document.getElementById("controls").innerHTML = Object.entries(group).map(([p, v], idx) => {
-            if (typeof v !== 'number') return '';
-            return `
-                <div class="p-row">
-                    <div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:8px">
-                        <span>${p}</span><span style="color:var(--accent)">${v}</span>
-                    </div>
-                    <input type="range" value="${v}" onchange="sendPacket(${idx}, this.value)">
-                </div>`;
-        }).join("");
-    }
-
-    async function syncFullPreset() {
-        if(!writeChar) return alert("Connect BLE first!");
-        const params = Object.values(currentPreset.detailObj).flatMap(g => Object.values(g).filter(v => typeof v === "number"));
-        for (let i = 0; i < params.length; i++) {
-            await sendPacket(i, params[i]);
-            await new Promise(r => setTimeout(r, 50));
+            document.getElementById('status').innerHTML = `STATUS: TX SUCCESS<br>PARAM: ${id} | VAL: ${val}`;
+        } catch(e) { 
+            document.getElementById('status').innerHTML = `<span style="color:#ff4444">TX ERROR: ${e.message}</span>`;
         }
-        alert("Preset Synced!");
     }
 
-    function closeDrawer() { document.getElementById("drawer").style.display = "none"; }
+    async function loadPresets() {
+        try {
+            const r = await fetch("https://api.allorigins.win" + encodeURIComponent("https://overseas-xg.enyamusic.cn"));
+            const j = await r.json();
+            const data = JSON.parse(j.contents).data;
+            presets = data.flatMap(bank => bank.list);
+            
+            const g = document.getElementById('grid');
+            presets.slice(0, 20).forEach((p, i) => {
+                const d = document.createElement('div');
+                d.className = 'card';
+                d.innerText = p.name;
+                d.onclick = () => {
+                    document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+                    d.classList.add('active');
+                    sendPacket(i, 100); // Пример: отправка ID пресета
+                };
+                g.appendChild(d);
+            });
+        } catch(e) { document.getElementById('status').innerText = "API LOAD ERROR"; }
+    }
+    loadPresets();
 </script>
 </body>
 </html>
